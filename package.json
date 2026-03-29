@@ -1,0 +1,44 @@
+﻿{
+  "name": "lucid-context-engine",
+  "version": "0.1.0",
+  "description": "Autonomous context engine plugin for OpenClaw — pre-search memory retrieval with salience scoring, QMD integration, and cross-agent memory support",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "build:watch": "tsc --project tsconfig.json --watch",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "keywords": [
+    "openclaw",
+    "openclaw-plugin",
+    "context-engine",
+    "retrieval-augmented",
+    "qmd",
+    "rag",
+    "memory",
+    "salience"
+  ],
+  "author": "Almost Spec Labs",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Spaztazim/lucid-context-engine.git"
+  },
+  "homepage": "https://github.com/Spaztazim/lucid-context-engine",
+  "bugs": {
+    "url": "https://github.com/Spaztazim/lucid-context-engine/issues"
+  },
+  "peerDependencies": {
+    "openclaw": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0"
+  },
+  "openclaw": {
+    "extensions": [
+      "./dist/index.js"
+    ]
+  }
+}
