@@ -1,59 +1,90 @@
-# LUCID Context Engine
+Ôªø<div align="center">
+  <img src="assets/banner.png" alt="LUCID Context Engine" width="100%">
 
-**Autonomous memory retrieval for OpenClaw agents.** LUCID hooks into OpenClaw's native ContextEngine API to automatically search your knowledge base *before* the model ever sees your message ó no manual retrieval, no extra steps.
+  <h1>LUCID</h1>
+  <h3>Autonomous memory retrieval for OpenClaw agents</h3>
 
-> Available since OpenClaw v3.7. Requires QMD (the OpenClaw workspace search daemon) to be running.
+  <p>
+    <a href="#install"><img src="https://img.shields.io/badge/Install-One%20Command-d4a017?style=for-the-badge" alt="Install"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-00d4ff?style=for-the-badge" alt="MIT License"></a>
+    <a href="https://github.com/openclaw/openclaw"><img src="https://img.shields.io/badge/OpenClaw-v3.7+-white?style=for-the-badge" alt="OpenClaw Compatible"></a>
+  </p>
+
+  <p><em>Hooks into OpenClaw's native ContextEngine API ‚Äî your agent searches its knowledge base before the model ever sees your message.</em></p>
+</div>
 
 ---
 
-## Why LUCID?
+## The Problem
 
-Most agents treat memory as an afterthought. You ask a question, they answer from their training data, and relevant context sitting in your files stays invisible.
+Standalone scoring libraries compute relevance ‚Äî but you still have to wire up every part of the retrieval pipeline yourself on every message. That's plumbing no one should write twice.
 
-LUCID flips that. Every time you send a message, LUCID:
+LUCID handles the full pipeline. Install once. It runs automatically on every turn.
 
-1. **Pre-searches your workspace** using QMD's hybrid BM25 + semantic search
-2. **Scores results by salience** ó not just relevance, but recency, file type, and collection priority
-3. **Injects what fits** into the system prompt, respecting your context budget
-4. **Skips the search** for trivial messages ("ok", "thanks", heartbeats) ó no wasted cycles
+---
 
-The result: your agent actually *remembers* things across sessions, pulls in relevant decisions and lessons automatically, and doesn't need to be told to "check your notes."
+## How LUCID Works
 
-### How it compares to standalone scoring libraries
+Every time you send a message, LUCID:
 
-Standalone scoring/ranking libraries let you compute relevance scores ó but you still have to wire up the retrieval pipeline yourself: call QMD, fetch results, format them, inject them at the right point in the prompt. That's plumbing work that has to happen on every message.
+1. **Filters trivially** ‚Äî skips search on "ok", "thanks", heartbeats, and short acks
+2. **Searches your workspace** ‚Äî hybrid BM25 + semantic search via QMD
+3. **Scores by salience** ‚Äî not just relevance, but recency, file type, and collection priority
+4. **Respects your budget** ‚Äî injects only what fits in your remaining context window
+5. **Passes it through** ‚Äî the model sees recalled context as part of its system prompt, automatically
 
-LUCID handles the full pipeline. Plug it in once, and it runs automatically on every turn, without any changes to your prompts or tools.
+No prompt changes. No tool calls. No manual retrieval. It just works.
+
+---
+
+## Architecture
+
+```mermaid
+flowchart LR
+    A([User Message]) --> B{Trivial?}
+    B -- yes --> G([Pass Through])
+    B -- no --> C[QMD Hybrid Search\nBM25 + Semantic]
+    C --> D[Salience Scoring\nrelevance √ó recency\n√ó type √ó collection]
+    D --> E{Budget\nCheck}
+    E --> F[Context Injection\nSystem Prompt Addition]
+    F --> H([Model])
+```
+
+### Salience Formula
+
+```
+salience = qmd_score √ó recency_weight √ó type_weight √ó collection_weight
+```
+
+| Factor | Values |
+|--------|--------|
+| **Recency** | ‚â§7d: `1.5√ó` ¬∑ ‚â§30d: `1.2√ó` ¬∑ ‚â§90d: `1.0√ó` ¬∑ older: `0.8√ó` |
+| **Type** | `LESSONS.md`: `2.0√ó` ¬∑ `decision`: `1.5√ó` ¬∑ `memory/*`: `1.0√ó` ¬∑ `log`: `0.7√ó` |
+| **Collection** | `memory`: `1.5√ó` ¬∑ `codex`: `1.2√ó` ¬∑ default: `1.0√ó` |
 
 ---
 
 ## Features
 
-- **Pre-search**: runs QMD hybrid search on every non-trivial prompt, before the model responds
-- **Salience scoring**: `relevance ◊ recency ◊ type_weight ◊ collection_weight` ó recent lessons score higher than old logs, memory files score higher than reference docs
-- **Context budget awareness**: injects results up to your remaining context window
-- **Trivial prompt filtering**: skips search on short acknowledgements and heartbeats
-- **Cross-agent memory**: reads from any QMD-indexed collection ó works across Lux, Deckard, Lyra, or any other agent sharing the same workspace
-- **Zero config required**: auto-detects QMD shim path, sensible defaults out of the box
-- **Graceful fallback**: if QMD is unavailable or times out, silently falls back ó no errors, no interruptions
+| | |
+|---|---|
+| üîç **Hybrid Search** | BM25 + semantic via QMD ‚Äî finds exact matches and conceptual matches |
+| üéØ **Salience Scoring** | Recency, file type, and collection priority all factor in |
+| üí∞ **Budget Aware** | Respects your context window ‚Äî injects top-K up to remaining tokens |
+| ‚ö° **Trivial Filtering** | Short acks and heartbeats skip search entirely |
+| üîÑ **Cross-Collection** | Reads from any QMD-indexed collection in your workspace |
+| üõ°Ô∏è **Graceful Fallback** | QMD unavailable? Silent passthrough ‚Äî no errors, no interruptions |
+| üîß **Zero Config** | Auto-detects QMD path, sensible defaults out of the box |
 
 ---
 
-## Installation
-
-### Via OpenClaw Extensions
+## Install
 
 ```bash
-# Copy to your OpenClaw extensions directory
-cp -r lucid-context-engine ~/.openclaw/extensions/
-
-# Or clone directly
 git clone https://github.com/Spaztazim/lucid-context-engine.git ~/.openclaw/extensions/lucid-context-engine
 ```
 
-### Activate the Engine
-
-In your OpenClaw config (`~/.openclaw/config.json` or per-agent config):
+Then activate in your OpenClaw config (`~/.openclaw/config.json` or per-agent):
 
 ```json
 {
@@ -70,13 +101,13 @@ In your OpenClaw config (`~/.openclaw/config.json` or per-agent config):
 }
 ```
 
-That's it. LUCID will start running on your next session.
+Restart your agent. Done.
 
 ---
 
 ## Configuration
 
-All config is optional ó defaults work out of the box.
+All options are optional ‚Äî defaults work out of the box.
 
 ```json
 {
@@ -84,9 +115,17 @@ All config is optional ó defaults work out of the box.
     "entries": {
       "lucid-context-engine": {
         "enabled": true,
+
+        // Max results to inject per turn
         "topK": 5,
+
+        // Minimum salience score (0.0‚Äì1.0) to include a result
         "threshold": 0.3,
+
+        // Path to qmd-shim.js (auto-detected if omitted)
         "qmdShimPath": "~/clawd/tools/qmd-shim.js",
+
+        // Max milliseconds to wait for QMD before falling back
         "timeoutMs": 5000
       }
     }
@@ -96,87 +135,32 @@ All config is optional ó defaults work out of the box.
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `topK` | `5` | Max results to inject per turn |
-| `threshold` | `0.3` | Minimum salience score (0.0ñ1.0) to include a result |
-| `qmdShimPath` | auto-detected | Path to `qmd-shim.js` (resolved from `USERPROFILE/clawd/tools/`) |
-| `timeoutMs` | `5000` | Max ms to wait for QMD before falling back |
+| `topK` | `5` | Max results injected per turn |
+| `threshold` | `0.3` | Minimum salience score to include |
+| `qmdShimPath` | auto | Path to `qmd-shim.js` |
+| `timeoutMs` | `5000` | QMD timeout in milliseconds |
 
 ---
 
-## Architecture
+## Comparison
 
-```
-User Message
-    ¶
-    ?
-+-----------------------------+
-¶  LUCID Context Engine       ¶
-¶  (ContextEngine API hook)   ¶
-¶                             ¶
-¶  1. Trivial filter?  --yes--? skip, pass through
-¶           ¶ no
-¶  2. QMD hybrid search       ¶
-¶     (BM25 + semantic)       ¶
-¶           ¶                 ¶
-¶  3. Salience scoring        ¶
-¶     relevance ◊ recency     ¶
-¶     ◊ type ◊ collection     ¶
-¶           ¶                 ¶
-¶  4. Threshold filter        ¶
-¶  5. Inject top-K into       ¶
-¶     system prompt addition  ¶
-+-----------------------------+
-    ¶
-    ?
-Model sees: [system prompt] + [recalled context] + [your message]
-```
-
-### Salience Scoring
-
-Each result gets a composite score:
-
-```
-salience = qmd_score ◊ recency_weight ◊ type_weight ◊ collection_weight
-```
-
-**Recency weights** (days since file was last modified):
-- =7 days: 1.5◊
-- =30 days: 1.2◊
-- =90 days: 1.0◊
-- Older: 0.8◊
-
-**Type weights** (based on filename patterns):
-- `LESSONS.md`, `lesson`, `correction`: 2.0◊
-- `decision`: 1.5◊
-- `memory/YYYY-MM-DD.md`: 1.0◊
-- `log`: 0.7◊
-
-**Collection weights** (based on QMD collection name):
-- `memory` collection: 1.5◊
-- `codex` collection: 1.2◊
-- Everything else: 1.0◊
-
----
-
-## How It Works
-
-LUCID registers itself via OpenClaw's `registerContextEngine` API (available since v3.7). When activated via `plugins.slots.contextEngine = "lucid"`, it intercepts every `assemble()` call in the prompt pipeline.
-
-The `assemble()` method:
-1. Checks if the prompt is trivial (< 10 chars, or matches patterns like "ok", "thanks", heartbeat)
-2. If not trivial, spawns a `qmd search` subprocess with a timeout
-3. Applies salience scoring to the raw results
-4. Filters by threshold and returns the top-K as a `systemPromptAddition`
-
-The runtime then appends this context to the system prompt automatically. The model sees it as part of its instructions, not as a user message.
+| | LUCID | Standalone Scoring Library |
+|---|---|---|
+| Full retrieval pipeline | ‚úÖ | ‚ùå Manual wiring required |
+| Automatic on every turn | ‚úÖ | ‚ùå Must call per-message |
+| Context budget management | ‚úÖ | ‚ùå |
+| Trivial prompt filtering | ‚úÖ | ‚ùå |
+| Graceful fallback | ‚úÖ | ‚ùå |
+| OpenClaw native integration | ‚úÖ | ‚ùå |
+| Lines of setup code | ~5 | ~100+ |
 
 ---
 
 ## Requirements
 
-- OpenClaw v3.7+
-- QMD workspace search daemon (ships with OpenClaw)
-- Node.js 18+ (for the subprocess spawn)
+- **OpenClaw** v3.7+
+- **QMD** workspace search daemon (ships with OpenClaw)
+- **Node.js** 18+
 
 ---
 
@@ -191,6 +175,17 @@ Output goes to `dist/`.
 
 ---
 
-## License
+## Built By
 
-MIT © 2026 Almost Spec Labs
+<div align="center">
+  <p>
+    <strong>Almost Spec Labs</strong><br>
+    <a href="https://github.com/Spaztazim">github.com/Spaztazim</a>
+  </p>
+</div>
+
+---
+
+<div align="center">
+  <sub>MIT License ¬∑ 2026 Almost Spec Labs</sub>
+</div>
