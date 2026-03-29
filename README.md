@@ -1,4 +1,4 @@
-ï»¿<div align="center">
+<div align="center">
   <img src="assets/banner.png" alt="LUCID Context Engine" width="100%">
 
   <h1>LUCID</h1>
@@ -10,14 +10,30 @@
     <a href="https://github.com/openclaw/openclaw"><img src="https://img.shields.io/badge/OpenClaw-v3.7+-white?style=for-the-badge" alt="OpenClaw Compatible"></a>
   </p>
 
-  <p><em>Hooks into OpenClaw's native ContextEngine API â€” your agent searches its knowledge base before the model ever sees your message.</em></p>
+  <p><em>Hooks into OpenClaw's native ContextEngine API — your agent searches its knowledge base before the model ever sees your message.</em></p>
 </div>
 
 ---
 
+
+<div align="center">
+
+### ? Quick Install
+
+```bash
+git clone https://github.com/Spaztazim/lucid-context-engine.git ~/.openclaw/extensions/lucid-context-engine
+cd ~/.openclaw/extensions/lucid-context-engine && npm install && npm run build
+```
+
+<sub>Restart your gateway after install. That's it.</sub>
+
+---
+
+</div>
+
 ## The Problem
 
-Standalone scoring libraries compute relevance â€” but you still have to wire up every part of the retrieval pipeline yourself on every message. That's plumbing no one should write twice.
+Standalone scoring libraries compute relevance — but you still have to wire up every part of the retrieval pipeline yourself on every message. That's plumbing no one should write twice.
 
 LUCID handles the full pipeline. Install once. It runs automatically on every turn.
 
@@ -27,11 +43,11 @@ LUCID handles the full pipeline. Install once. It runs automatically on every tu
 
 Every time you send a message, LUCID:
 
-1. **Filters trivially** â€” skips search on "ok", "thanks", heartbeats, and short acks
-2. **Searches your workspace** â€” hybrid BM25 + semantic search via QMD
-3. **Scores by salience** â€” not just relevance, but recency, file type, and collection priority
-4. **Respects your budget** â€” injects only what fits in your remaining context window
-5. **Passes it through** â€” the model sees recalled context as part of its system prompt, automatically
+1. **Filters trivially** — skips search on "ok", "thanks", heartbeats, and short acks
+2. **Searches your workspace** — hybrid BM25 + semantic search via QMD
+3. **Scores by salience** — not just relevance, but recency, file type, and collection priority
+4. **Respects your budget** — injects only what fits in your remaining context window
+5. **Passes it through** — the model sees recalled context as part of its system prompt, automatically
 
 No prompt changes. No tool calls. No manual retrieval. It just works.
 
@@ -44,7 +60,7 @@ flowchart LR
     A([User Message]) --> B{Trivial?}
     B -- yes --> G([Pass Through])
     B -- no --> C[QMD Hybrid Search\nBM25 + Semantic]
-    C --> D[Salience Scoring\nrelevance Ã— recency\nÃ— type Ã— collection]
+    C --> D[Salience Scoring\nrelevance × recency\n× type × collection]
     D --> E{Budget\nCheck}
     E --> F[Context Injection\nSystem Prompt Addition]
     F --> H([Model])
@@ -53,14 +69,14 @@ flowchart LR
 ### Salience Formula
 
 ```
-salience = qmd_score Ã— recency_weight Ã— type_weight Ã— collection_weight
+salience = qmd_score × recency_weight × type_weight × collection_weight
 ```
 
 | Factor | Values |
 |--------|--------|
-| **Recency** | â‰¤7d: `1.5Ã—` Â· â‰¤30d: `1.2Ã—` Â· â‰¤90d: `1.0Ã—` Â· older: `0.8Ã—` |
-| **Type** | `LESSONS.md`: `2.0Ã—` Â· `decision`: `1.5Ã—` Â· `memory/*`: `1.0Ã—` Â· `log`: `0.7Ã—` |
-| **Collection** | `memory`: `1.5Ã—` Â· `codex`: `1.2Ã—` Â· default: `1.0Ã—` |
+| **Recency** | =7d: `1.5×` · =30d: `1.2×` · =90d: `1.0×` · older: `0.8×` |
+| **Type** | `LESSONS.md`: `2.0×` · `decision`: `1.5×` · `memory/*`: `1.0×` · `log`: `0.7×` |
+| **Collection** | `memory`: `1.5×` · `codex`: `1.2×` · default: `1.0×` |
 
 ---
 
@@ -68,13 +84,13 @@ salience = qmd_score Ã— recency_weight Ã— type_weight Ã— collection_weight
 
 | | |
 |---|---|
-| ğŸ” **Hybrid Search** | BM25 + semantic via QMD â€” finds exact matches and conceptual matches |
-| ğŸ¯ **Salience Scoring** | Recency, file type, and collection priority all factor in |
-| ğŸ’° **Budget Aware** | Respects your context window â€” injects top-K up to remaining tokens |
-| âš¡ **Trivial Filtering** | Short acks and heartbeats skip search entirely |
-| ğŸ”„ **Cross-Collection** | Reads from any QMD-indexed collection in your workspace |
-| ğŸ›¡ï¸ **Graceful Fallback** | QMD unavailable? Silent passthrough â€” no errors, no interruptions |
-| ğŸ”§ **Zero Config** | Auto-detects QMD path, sensible defaults out of the box |
+| ?? **Hybrid Search** | BM25 + semantic via QMD — finds exact matches and conceptual matches |
+| ?? **Salience Scoring** | Recency, file type, and collection priority all factor in |
+| ?? **Budget Aware** | Respects your context window — injects top-K up to remaining tokens |
+| ? **Trivial Filtering** | Short acks and heartbeats skip search entirely |
+| ?? **Cross-Collection** | Reads from any QMD-indexed collection in your workspace |
+| ??? **Graceful Fallback** | QMD unavailable? Silent passthrough — no errors, no interruptions |
+| ?? **Zero Config** | Auto-detects QMD path, sensible defaults out of the box |
 
 ---
 
@@ -107,7 +123,7 @@ Restart your agent. Done.
 
 ## Configuration
 
-All options are optional â€” defaults work out of the box.
+All options are optional — defaults work out of the box.
 
 ```json
 {
@@ -119,7 +135,7 @@ All options are optional â€” defaults work out of the box.
         // Max results to inject per turn
         "topK": 5,
 
-        // Minimum salience score (0.0â€“1.0) to include a result
+        // Minimum salience score (0.0–1.0) to include a result
         "threshold": 0.3,
 
         // Path to qmd-shim.js (auto-detected if omitted)
@@ -146,12 +162,12 @@ All options are optional â€” defaults work out of the box.
 
 | | LUCID | Standalone Scoring Library |
 |---|---|---|
-| Full retrieval pipeline | âœ… | âŒ Manual wiring required |
-| Automatic on every turn | âœ… | âŒ Must call per-message |
-| Context budget management | âœ… | âŒ |
-| Trivial prompt filtering | âœ… | âŒ |
-| Graceful fallback | âœ… | âŒ |
-| OpenClaw native integration | âœ… | âŒ |
+| Full retrieval pipeline | ? | ? Manual wiring required |
+| Automatic on every turn | ? | ? Must call per-message |
+| Context budget management | ? | ? |
+| Trivial prompt filtering | ? | ? |
+| Graceful fallback | ? | ? |
+| OpenClaw native integration | ? | ? |
 | Lines of setup code | ~5 | ~100+ |
 
 ---
@@ -187,5 +203,5 @@ Output goes to `dist/`.
 ---
 
 <div align="center">
-  <sub>MIT License Â· 2026 Almost Spec Labs</sub>
+  <sub>MIT License · 2026 Almost Spec Labs</sub>
 </div>
